@@ -209,7 +209,9 @@ func (s *PromotionStep) BuildEnv(
 // condition. The If condition is evaluated in the context of the provided
 // PromotionContext and State.
 func (s *PromotionStep) Skip(
+	ctx context.Context,
 	promoCtx PromotionContext,
+	cl client.Client,
 	state State,
 ) (bool, error) {
 	if s.If == "" {
@@ -228,7 +230,15 @@ func (s *PromotionStep) Skip(
 		StepEnvWithVars(vars),
 	)
 
-	v, err := expressions.EvaluateTemplate(s.If, env)
+	v, err := expressions.EvaluateTemplate(s.If, env,
+		exprfn.FreightOperations(
+			ctx,
+			cl,
+			promoCtx.Project,
+			promoCtx.FreightRequests,
+			promoCtx.Freight.References(),
+		)...,
+	)
 	if err != nil {
 		return false, err
 	}

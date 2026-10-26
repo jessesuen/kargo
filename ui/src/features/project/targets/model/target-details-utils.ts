@@ -65,3 +65,21 @@ export const freightArtifacts = (collection?: FreightCollection): Artifact[] =>
     .flatMap((reference) => flattenFreightOrigin(reference))
     .map(describeArtifact)
     .filter(({ text }) => text);
+
+// supersededFreight pairs each piece of Freight a Target is on with what its
+// Stage has since moved on to from the same origin, leaving out what is still
+// current. Matching by origin rather than by name is what says which of the
+// Stage's Freight replaces which of the Target's.
+export const supersededFreight = (
+  target?: FreightCollection,
+  stage?: FreightCollection
+): Record<string, string> => {
+  const superseded: Record<string, string> = {};
+  for (const [origin, reference] of Object.entries(target?.items || {})) {
+    const newer = stage?.items?.[origin]?.name;
+    if (reference.name && newer && newer !== reference.name) {
+      superseded[reference.name] = newer;
+    }
+  }
+  return superseded;
+};

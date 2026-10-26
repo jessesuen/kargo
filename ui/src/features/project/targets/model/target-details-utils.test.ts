@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { describeArtifact, flattenParams } from './target-details-utils';
+import { describeArtifact, flattenParams, supersededFreight } from './target-details-utils';
 
 describe('flattenParams()', () => {
   test('nests into dotted keys and sorts them', () => {
@@ -60,5 +60,30 @@ describe('describeArtifact()', () => {
     expect(
       describeArtifact({ type: 'image', repoURL: 'ghcr.io/example/otel-app/', tag: 'v1' })
     ).toEqual({ kind: 'Image', text: 'otel-app:v1' });
+  });
+});
+
+describe('supersededFreight()', () => {
+  const collection = (items: Record<string, string>) => ({
+    items: Object.fromEntries(Object.entries(items).map(([origin, name]) => [origin, { name }]))
+  });
+
+  test('pairs outdated Freight with the newer Freight from the same origin', () => {
+    expect(
+      supersededFreight(
+        collection({ 'Warehouse/a': 'old-a', 'Warehouse/b': 'same-b' }),
+        collection({ 'Warehouse/a': 'new-a', 'Warehouse/b': 'same-b' })
+      )
+    ).toEqual({ 'old-a': 'new-a' });
+  });
+
+  test('an origin the Stage has nothing from is not superseded', () => {
+    expect(
+      supersededFreight(collection({ 'Warehouse/a': 'old-a' }), collection({ 'Warehouse/b': 'b' }))
+    ).toEqual({});
+  });
+
+  test('nothing to compare, nothing superseded', () => {
+    expect(supersededFreight()).toEqual({});
   });
 });

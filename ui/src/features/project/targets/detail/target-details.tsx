@@ -10,7 +10,7 @@ import { SmallLabel } from '@ui/features/common/small-label';
 import { parseDate } from '@ui/utils/dates';
 
 import { freightNames } from '../model/round-utils';
-import { flattenParams, freightArtifacts } from '../model/target-details-utils';
+import { flattenParams, freightArtifacts, supersededFreight } from '../model/target-details-utils';
 import { GoverningStage, TargetRow } from '../model/target-rows';
 import { targetStatePresentations } from '../model/target-state';
 import { FreightLink } from '../shared/freight-link';
@@ -32,20 +32,34 @@ const Row = ({ label, children }: { label: string; children: React.ReactNode }) 
   </Flex>
 );
 
+// FreightLinks lists Freight. Any the Stage has since moved past is marked as
+// such, and says on hover what replaced it.
 const FreightLinks = ({
   project,
   names,
-  freightLabel
+  freightLabel,
+  superseded = {}
 }: {
   project: string;
   names: string[];
   freightLabel: (name: string) => string;
+  superseded?: Record<string, string>;
 }) =>
   names.length ? (
     <Flex gap={6} wrap justify='flex-end'>
-      {names.map((name) => (
-        <FreightLink key={name} project={project} name={name} label={freightLabel(name)} />
-      ))}
+      {names.map((name) => {
+        const newer = superseded[name];
+        return (
+          <FreightLink
+            key={name}
+            project={project}
+            name={name}
+            label={freightLabel(name)}
+            className={newer ? '!text-yellow-500' : undefined}
+            tooltip={newer && `${name} is behind: the Stage is on ${newer}`}
+          />
+        );
+      })}
     </Flex>
   ) : (
     <Typography.Text type='secondary' className='text-xs'>
@@ -69,7 +83,9 @@ const StageCard = ({
   freightLabel: (name: string) => string;
 }) => {
   const stageName = governing.stage.metadata?.name || '';
-  const stageFreight = freightNames(governing.stage.status?.freightHistory?.[0]);
+  const stageCollection = governing.stage.status?.freightHistory?.[0];
+  const stageFreight = freightNames(stageCollection);
+  const superseded = supersededFreight(governing.currentFreight, stageCollection);
   const artifacts = freightArtifacts(governing.currentFreight);
   const issues = governing.health?.issues || [];
 
@@ -91,6 +107,7 @@ const StageCard = ({
             project={project}
             names={freightNames(governing.currentFreight)}
             freightLabel={freightLabel}
+            superseded={superseded}
           />
         </Row>
         {governing.upToDate === false && (
@@ -114,12 +131,6 @@ const StageCard = ({
         </Row>
       </Flex>
 
-      {governing.upToDate === false && (
-        <Typography.Text type='warning' className='text-xs block mt-2'>
-          Behind: Stage is on {stageFreight.map(freightLabel).join(', ') || 'other Freight'}, Target
-          on {freightNames(governing.currentFreight).map(freightLabel).join(', ') || 'none'}
-        </Typography.Text>
-      )}
       {issues.length > 0 && (
         <Typography.Text type='danger' className='text-xs block mt-2'>
           {issues.join('; ')}

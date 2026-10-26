@@ -133,11 +133,18 @@ export const TargetTable = ({
       onCell: truncatingCell,
       render: (_, row) => {
         const ahead = aheadFreight(row);
-        // Each line ends in an ellipsis where the column does. Every name
-        // still carries its own tooltip, and the row's details list them all.
+        // One line, ending in an ellipsis where the column does. Being behind
+        // is only flagged here; the row's details say which Freight is.
         return (
-          <Flex vertical gap={4} align='flex-start'>
-            <div className='truncate max-w-full text-xs'>
+          <Flex gap={6} align='center' className='min-w-0'>
+            {ahead.length > 0 && (
+              <Tooltip title={`The Stage has moved on to ${ahead.join(', ')}`}>
+                <Tag color='warning' className='m-0 text-xs shrink-0'>
+                  behind
+                </Tag>
+              </Tooltip>
+            )}
+            <div className='truncate min-w-0 text-xs'>
               {row.freight.length ? (
                 row.freight.map((name, index) => (
                   <Fragment key={name}>
@@ -151,13 +158,6 @@ export const TargetTable = ({
                 </Typography.Text>
               )}
             </div>
-            {ahead.length > 0 && (
-              <Tooltip title={`The Stage has moved on to ${ahead.join(', ')}`}>
-                <Tag color='warning' className='m-0 text-xs font-mono max-w-full truncate'>
-                  behind {ahead.map(freightLabel).join(', ')}
-                </Tag>
-              </Tooltip>
-            )}
           </Flex>
         );
       }

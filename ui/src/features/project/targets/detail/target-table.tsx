@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Flex, Table, Tag, Tooltip, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { TablePaginationConfig } from 'antd/es/table/interface';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -20,8 +20,12 @@ import { TargetDetails } from './target-details';
 // past this many, the rest fold into a "+N more" tag that lists them on hover.
 const maxStageLinks = 4;
 
-// Likewise for labels, which a Target may carry any number of.
-const maxLabelTags = 4;
+// A cell with a max-width of zero adds nothing to its column's minimum width,
+// so however much it holds it cannot squeeze the others: it takes the width
+// its column is given and truncates what does not fit. The Target column has
+// no such cap, so a name -- the one thing a reader scans the list for -- is
+// always printed whole.
+const truncatingCell = () => ({ style: { maxWidth: 0 } });
 
 /**
  * TargetTable lists Targets row by row, each opening on click to everything
@@ -56,7 +60,7 @@ export const TargetTable = ({
       title: 'Target',
       key: 'target',
       render: (_, row) => (
-        <Typography.Text className='text-xs font-semibold'>
+        <Typography.Text className='text-xs font-semibold whitespace-nowrap'>
           <FontAwesomeIcon icon={faBullseye} className='mr-2 text-gray-400' />
           {row.target.metadata?.name}
         </Typography.Text>
@@ -65,29 +69,24 @@ export const TargetTable = ({
     {
       title: 'Labels',
       key: 'labels',
-      width: '28%',
+      width: '25%',
+      onCell: truncatingCell,
       render: (_, row) => {
         const labels = visibleLabels(row.target).filter(([key]) => key !== groupKey);
+        // One line, cut off where the column ends; hovering lists them all.
         return (
-          <Flex gap={4} wrap>
-            {labels.slice(0, maxLabelTags).map(([key, value]) => (
-              <Tag key={key} bordered={false} className='m-0 text-xs'>
-                {key}={value}
-              </Tag>
-            ))}
-            {labels.length > maxLabelTags && (
-              <Tooltip
-                title={labels
-                  .slice(maxLabelTags)
-                  .map(([key, value]) => `${key}=${value}`)
-                  .join(', ')}
-              >
-                <Tag bordered={false} className='m-0 text-xs'>
-                  +{labels.length - maxLabelTags}
+          <Tooltip
+            title={labels.map(([key, value]) => `${key}=${value}`).join(', ')}
+            placement='topLeft'
+          >
+            <Flex gap={4} className='overflow-hidden'>
+              {labels.map(([key, value]) => (
+                <Tag key={key} bordered={false} className='m-0 text-xs shrink-0'>
+                  {key}={value}
                 </Tag>
-              </Tooltip>
-            )}
-          </Flex>
+              ))}
+            </Flex>
+          </Tooltip>
         );
       }
     },
@@ -130,29 +129,31 @@ export const TargetTable = ({
     {
       title: 'Freight',
       key: 'freight',
-      width: 200,
+      width: '25%',
+      onCell: truncatingCell,
       render: (_, row) => {
         const ahead = aheadFreight(row);
+        // Each line ends in an ellipsis where the column does. Every name
+        // still carries its own tooltip, and the row's details list them all.
         return (
-          <Flex gap={6} wrap align='center'>
-            {row.freight.length ? (
-              row.freight.map((name) => (
-                <FreightLink
-                  key={name}
-                  project={project}
-                  name={name}
-                  label={freightLabel(name)}
-                  className='text-xs'
-                />
-              ))
-            ) : (
-              <Typography.Text type='secondary' className='text-xs'>
-                none
-              </Typography.Text>
-            )}
+          <Flex vertical gap={4} align='flex-start'>
+            <div className='truncate max-w-full text-xs'>
+              {row.freight.length ? (
+                row.freight.map((name, index) => (
+                  <Fragment key={name}>
+                    {index > 0 && ' '}
+                    <FreightLink project={project} name={name} label={freightLabel(name)} />
+                  </Fragment>
+                ))
+              ) : (
+                <Typography.Text type='secondary' className='text-xs'>
+                  none
+                </Typography.Text>
+              )}
+            </div>
             {ahead.length > 0 && (
               <Tooltip title={`The Stage has moved on to ${ahead.join(', ')}`}>
-                <Tag color='warning' className='m-0 text-xs font-mono'>
+                <Tag color='warning' className='m-0 text-xs font-mono max-w-full truncate'>
                   behind {ahead.map(freightLabel).join(', ')}
                 </Tag>
               </Tooltip>

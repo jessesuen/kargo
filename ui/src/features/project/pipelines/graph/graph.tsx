@@ -20,7 +20,7 @@ import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
 
 import { CustomRepoSubscriptionNode, CustomStageNode, CustomWarehouseNode } from './custom-node';
-import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
+import { stageIndexer, warehouseIndexer } from './node-indexer';
 import { useEventsWatcher } from './use-events-watcher';
 import { reactFlowNodeConstants, useReactFlowPipelineGraph } from './use-pipeline-graph';
 
@@ -212,16 +212,6 @@ export const Graph = (props: GraphProps) => {
     });
   }, [typedEdges, hoveredWarehouseName, distinctEdgeWarehouses]);
 
-  const nodesExcludingSubscriptionNodes = useMemo(() => {
-    const subscriptionNodes = nodes.filter((n) => repoSubscriptionIndexer.is(n.id));
-
-    if (subscriptionNodes?.length > 5) {
-      return nodes.filter((n) => !repoSubscriptionIndexer.is(n.id));
-    }
-
-    return nodes;
-  }, [nodes]);
-
   useEffect(() => {
     requestAnimationFrame(() => {
       reactFlowInstance.current?.fitView();
@@ -299,9 +289,6 @@ export const Graph = (props: GraphProps) => {
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{
-          nodes: nodesExcludingSubscriptionNodes
-        }}
         proOptions={{ hideAttribution: true }}
         minZoom={nodes.length > 100 ? 0.4 : 0.1}
         maxZoom={1.4}

@@ -47,7 +47,11 @@ export const layoutGraph = (
   }
 
   const maxStageHeight = 200;
-  const maxSubscriptionHeight = 100;
+  // A Warehouse and its subscriptions are laid out a little tighter than the
+  // cards themselves, which are about 85px. A project may have dozens of
+  // Warehouses, and spacing each a Stage apart stretches the column far past
+  // the Stages it feeds; the gap between nodes still keeps them apart.
+  const warehouseRowHeight = 80;
 
   for (const w of warehouse.warehouses) {
     if (warehouse.ignore?.(w)) {
@@ -58,7 +62,7 @@ export const layoutGraph = (
     graph.setNode(warehouseNodeIndex, {
       ...warehouseLabelling.label(w),
       ...warehouseSizer.size(),
-      height: maxStageHeight
+      height: warehouseRowHeight
     });
 
     if (hideSubscriptions?.[w?.metadata?.name || '']) {
@@ -71,7 +75,7 @@ export const layoutGraph = (
       graph.setNode(subscriptionNodeIndex, {
         ...repoSubscriptionLabelling.label(w, s),
         ...repoSubscriptionSizer.size(),
-        height: maxSubscriptionHeight
+        height: warehouseRowHeight
       });
 
       graph.setEdge(subscriptionNodeIndex, warehouseNodeIndex);
